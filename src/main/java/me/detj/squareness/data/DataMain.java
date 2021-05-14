@@ -67,6 +67,7 @@ public class DataMain {
 
         String asJson = outputJson.toJSONString();
         byte[] bytes = asJson.getBytes(Charset.forName("UTF-8"));
+        Files.createDirectories(Path.of(ACTUAL_OUTPUT_DIRECTORY));
         Files.write(Path.of(ACTUAL_OUTPUT_DIRECTORY, "data.json"), bytes);
 
     }
