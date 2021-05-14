@@ -10,6 +10,9 @@ import org.geotools.geometry.jts.JTS;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.util.AffineTransformation;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -17,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class DataMain {
 
@@ -27,13 +31,28 @@ public class DataMain {
     private static final int MAX_IMAGE_WIDTH = 1000;
     private static final int MAX_IMAGE_HEIGHT = 1000;
 
+    //Countries where the polygons are too low quality for the website
+    private static final Set<String> BAD_DATA_COUNTRIES = Set.of("Scarborough Reef", "Nauru", "Baykonur Cosmodrome",
+            "Bajo Nuevo Bank (Petrel Is.)", "Clipperton Island", "Saint Barthelemy", "Serranilla Bank",
+            "Coral Sea Island", "Sint Maarten");
+
     public static void main(String[] args) throws IOException {
         List<Country> countries = new ArrayList<>(Reader.read());
 
+        //add fake testing countries
+        Geometry square = JTS.toGeometry(new Envelope(0, 1, 0, 1));
         countries.add(Country.builder()
                 .name("Squaristan")
                 .code("SQR")
-                .polygon(JTS.toGeometry(new Envelope(0, 1, 0, 1)))
+                .polygon(square)
+                .build());
+
+        Geometry diamond = square.copy();
+        diamond.apply(AffineTransformation.rotationInstance(Math.PI / 4));//rotate 45 degrees
+        countries.add(Country.builder()
+                .name("Diamondistan")
+                .code("DIA")
+                .polygon(diamond)
                 .build()
         );
 
@@ -43,6 +62,7 @@ public class DataMain {
 
         countries.stream()
                 .parallel()
+                .filter(country -> !BAD_DATA_COUNTRIES.contains(country.getName()))
                 .forEach(country -> {
                     System.out.println("Processing " + country.getName());
 
@@ -68,7 +88,7 @@ public class DataMain {
         String asJson = outputJson.toJSONString();
         byte[] bytes = asJson.getBytes(Charset.forName("UTF-8"));
         Files.createDirectories(Path.of(ACTUAL_OUTPUT_DIRECTORY));
-        Files.write(Path.of(ACTUAL_OUTPUT_DIRECTORY, "data.json"), bytes);
+        Files.write(Path.of(ACTUAL_OUTPUT_DIRECTORY, "countries.json"), bytes);
 
     }
 
